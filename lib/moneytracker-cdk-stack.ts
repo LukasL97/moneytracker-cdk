@@ -1,9 +1,9 @@
-import {Duration, Stack, StackProps} from 'aws-cdk-lib'
+import {Duration, RemovalPolicy, Stack, StackProps} from 'aws-cdk-lib'
 import {Construct} from 'constructs'
 import {NodejsFunction} from 'aws-cdk-lib/aws-lambda-nodejs'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as path from 'path'
-import {LambdaIntegration, RestApi} from 'aws-cdk-lib/aws-apigateway'
+import {ApiKeySourceType, LambdaIntegration, RestApi} from 'aws-cdk-lib/aws-apigateway'
 import {AttributeType, BillingMode, Table} from 'aws-cdk-lib/aws-dynamodb'
 import {PolicyStatement} from 'aws-cdk-lib/aws-iam'
 
@@ -17,7 +17,8 @@ export class MoneytrackerCdkStack extends Stack {
         name: 'id',
         type: AttributeType.STRING
       },
-      billingMode: BillingMode.PAY_PER_REQUEST
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      removalPolicy: RemovalPolicy.DESTROY
     })
 
     const getRecords = new NodejsFunction(this, 'get-records', {
@@ -38,10 +39,46 @@ export class MoneytrackerCdkStack extends Stack {
       })
     )
 
-    const api = new RestApi(this, 'api', {
-      restApiName: 'records service'
+    const putRecord = new NodejsFunction(this, 'put-record', {
+      memorySize: 128,
+      timeout: Duration.seconds(5),
+      runtime: lambda.Runtime.NODEJS_16_X,
+      handler: 'putRecord',
+      entry: path.join(__dirname, '/../src/lambdas/put-record.ts'),
+      environment: {
+        DYNAMODB_TABLE: recordsTable.tableName
+      }
     })
-    const recordsApi = api.root.addResource('records')
+
+    putRecord.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['dynamodb:PutItem'],
+        resources: [recordsTable.tableArn]
+      })
+    )
+
+    const api = new RestApi(this, 'api', {
+      restApiName: 'records service',
+      apiKeySourceType: ApiKeySourceType.HEADER
+    })
+    const recordsApi = api.root.addResource('records', {
+      defaultMethodOptions: {
+        apiKeyRequired: true
+      }
+    })
     recordsApi.addMethod('GET', new LambdaIntegration(getRecords))
+    recordsApi.addMethod('PUT', new LambdaIntegration(putRecord))
+
+    const apiKey = api.addApiKey('api-key', {
+      apiKeyName: 'records-service-api-key'
+    })
+    const apiUsagePlan = api.addUsagePlan('api-usage-plan', {
+      name: 'records-service-api-usage-plan',
+      apiStages: [{
+        api: api,
+        stage: api.deploymentStage
+      }]
+    })
+    apiUsagePlan.addApiKey(apiKey)
   }
 }
