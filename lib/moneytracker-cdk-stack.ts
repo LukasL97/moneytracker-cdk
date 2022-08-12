@@ -2,6 +2,7 @@ import {Duration, RemovalPolicy, Stack, StackProps} from 'aws-cdk-lib'
 import {Construct} from 'constructs'
 import {NodejsFunction} from 'aws-cdk-lib/aws-lambda-nodejs'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
+import {Tracing} from 'aws-cdk-lib/aws-lambda'
 import * as path from 'path'
 import {ApiKeySourceType, LambdaIntegration, RestApi} from 'aws-cdk-lib/aws-apigateway'
 import {AttributeType, BillingMode, Table} from 'aws-cdk-lib/aws-dynamodb'
@@ -29,7 +30,8 @@ export class MoneytrackerCdkStack extends Stack {
       entry: path.join(__dirname, '/../src/lambdas/get-records.ts'),
       environment: {
         DYNAMODB_TABLE: recordsTable.tableName
-      }
+      },
+      tracing: Tracing.ACTIVE
     })
 
     getRecords.addToRolePolicy(
@@ -47,7 +49,8 @@ export class MoneytrackerCdkStack extends Stack {
       entry: path.join(__dirname, '/../src/lambdas/put-record.ts'),
       environment: {
         DYNAMODB_TABLE: recordsTable.tableName
-      }
+      },
+      tracing: Tracing.ACTIVE
     })
 
     putRecord.addToRolePolicy(
@@ -57,17 +60,40 @@ export class MoneytrackerCdkStack extends Stack {
       })
     )
 
+    const deleteRecord = new NodejsFunction(this, 'delete-record', {
+      memorySize: 128,
+      timeout: Duration.seconds(5),
+      runtime: lambda.Runtime.NODEJS_16_X,
+      handler: 'deleteRecord',
+      entry: path.join(__dirname, '/../src/lambdas/delete-record.ts'),
+      environment: {
+        DYNAMODB_TABLE: recordsTable.tableName
+      },
+      tracing: Tracing.ACTIVE
+    })
+
+    deleteRecord.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['dynamodb:DeleteItem'],
+        resources: [recordsTable.tableArn]
+      })
+    )
+
     const api = new RestApi(this, 'api', {
       restApiName: 'records service',
-      apiKeySourceType: ApiKeySourceType.HEADER
+      apiKeySourceType: ApiKeySourceType.HEADER,
+      deployOptions: {
+        tracingEnabled: true
+      }
     })
     const recordsApi = api.root.addResource('records', {
       defaultMethodOptions: {
         apiKeyRequired: true
-      }
+      },
     })
     recordsApi.addMethod('GET', new LambdaIntegration(getRecords))
     recordsApi.addMethod('PUT', new LambdaIntegration(putRecord))
+    recordsApi.addMethod('DELETE', new LambdaIntegration(deleteRecord))
 
     const apiKey = api.addApiKey('api-key', {
       apiKeyName: 'records-service-api-key'
