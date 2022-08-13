@@ -1,5 +1,3 @@
-import {aws_ram} from 'aws-cdk-lib'
-
 export interface Record {
   user: string
   title: string

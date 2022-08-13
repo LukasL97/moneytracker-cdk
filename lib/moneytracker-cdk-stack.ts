@@ -86,14 +86,15 @@ export class MoneytrackerCdkStack extends Stack {
         tracingEnabled: true
       }
     })
-    const recordsApi = api.root.addResource('records', {
+    const recordsResource = api.root.addResource('records', {
       defaultMethodOptions: {
         apiKeyRequired: true
       },
     })
-    recordsApi.addMethod('GET', new LambdaIntegration(getRecords))
-    recordsApi.addMethod('PUT', new LambdaIntegration(putRecord))
-    recordsApi.addMethod('DELETE', new LambdaIntegration(deleteRecord))
+    const recordsResourceId = recordsResource.addResource('{id}')
+    recordsResource.addMethod('GET', new LambdaIntegration(getRecords))
+    recordsResource.addMethod('PUT', new LambdaIntegration(putRecord))
+    recordsResourceId.addMethod('DELETE', new LambdaIntegration(deleteRecord))
 
     const apiKey = api.addApiKey('api-key', {
       apiKeyName: 'records-service-api-key'

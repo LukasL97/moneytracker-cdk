@@ -5,7 +5,7 @@ import {DynamoDB} from 'aws-sdk'
 const db = new DynamoDB.DocumentClient()
 
 export async function deleteRecord(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
-  const id = event.queryStringParameters?.['id']
+  const id = event.pathParameters?.['id']
   if (!id) {
     return {
       body: 'id is missing',
@@ -16,10 +16,17 @@ export async function deleteRecord(event: APIGatewayProxyEventV2): Promise<APIGa
       TableName: process.env.DYNAMODB_TABLE!!,
       Key: {
         id
-      }
-    }).promise().then(() => {
-      return {
-        statusCode: StatusCodes.ACCEPTED
+      },
+      ReturnValues: 'ALL_OLD'
+    }).promise().then(result => {
+      if (result.Attributes) {
+        return {
+          statusCode: StatusCodes.ACCEPTED
+        }
+      } else {
+        return {
+          statusCode: StatusCodes.NOT_FOUND
+        }
       }
     })
   }
