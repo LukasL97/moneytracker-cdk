@@ -22,18 +22,21 @@ export class MoneytrackerCdkStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY
     })
 
-    const getRecords = new NodejsFunction(this, 'get-records', {
+    const recordLambdaProps = {
       memorySize: 128,
       timeout: Duration.seconds(5),
       runtime: lambda.Runtime.NODEJS_16_X,
-      handler: 'getRecords',
-      entry: path.join(__dirname, '/../src/lambdas/get-records.ts'),
       environment: {
         DYNAMODB_TABLE: recordsTable.tableName
       },
       tracing: Tracing.ACTIVE
-    })
+    }
 
+    const getRecords = new NodejsFunction(this, 'get-records', {
+      handler: 'getRecords',
+      entry: path.join(__dirname, '/../src/lambdas/get-records.ts'),
+      ...recordLambdaProps
+    })
     getRecords.addToRolePolicy(
       new PolicyStatement({
         actions: ['dynamodb:Scan'],
@@ -42,17 +45,10 @@ export class MoneytrackerCdkStack extends Stack {
     )
 
     const putRecord = new NodejsFunction(this, 'put-record', {
-      memorySize: 128,
-      timeout: Duration.seconds(5),
-      runtime: lambda.Runtime.NODEJS_16_X,
       handler: 'putRecord',
       entry: path.join(__dirname, '/../src/lambdas/put-record.ts'),
-      environment: {
-        DYNAMODB_TABLE: recordsTable.tableName
-      },
-      tracing: Tracing.ACTIVE
+      ...recordLambdaProps
     })
-
     putRecord.addToRolePolicy(
       new PolicyStatement({
         actions: ['dynamodb:PutItem'],
@@ -61,17 +57,10 @@ export class MoneytrackerCdkStack extends Stack {
     )
 
     const deleteRecord = new NodejsFunction(this, 'delete-record', {
-      memorySize: 128,
-      timeout: Duration.seconds(5),
-      runtime: lambda.Runtime.NODEJS_16_X,
       handler: 'deleteRecord',
       entry: path.join(__dirname, '/../src/lambdas/delete-record.ts'),
-      environment: {
-        DYNAMODB_TABLE: recordsTable.tableName
-      },
-      tracing: Tracing.ACTIVE
+      ...recordLambdaProps
     })
-
     deleteRecord.addToRolePolicy(
       new PolicyStatement({
         actions: ['dynamodb:DeleteItem'],
