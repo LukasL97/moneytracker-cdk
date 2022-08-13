@@ -1,17 +1,16 @@
 import {APIGatewayProxyEventV2, APIGatewayProxyResultV2} from 'aws-lambda'
-import {StatusCodes} from 'http-status-codes'
-import {DynamoDB} from 'aws-sdk'
-
-const db = new DynamoDB.DocumentClient()
+import {withErrorMapping} from '../errors/error-helpers'
+import {BadRequestError} from '../errors/BadRequestError'
+import {RecordNotFoundError} from '../errors/RecordNotFoundError'
+import {accepted} from '../utils/responses'
+import {db} from '../utils/db'
 
 export async function deleteRecord(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
-  const id = event.pathParameters?.['id']
-  if (!id) {
-    return {
-      body: 'id is missing',
-      statusCode: StatusCodes.BAD_REQUEST
+  return withErrorMapping(async () => {
+    const id = event.pathParameters?.['id']
+    if (!id) {
+      throw new BadRequestError('id is missing')
     }
-  } else {
     return db.delete({
       TableName: process.env.DYNAMODB_TABLE!!,
       Key: {
@@ -20,14 +19,10 @@ export async function deleteRecord(event: APIGatewayProxyEventV2): Promise<APIGa
       ReturnValues: 'ALL_OLD'
     }).promise().then(result => {
       if (result.Attributes) {
-        return {
-          statusCode: StatusCodes.ACCEPTED
-        }
+        return accepted()
       } else {
-        return {
-          statusCode: StatusCodes.NOT_FOUND
-        }
+        throw new RecordNotFoundError(id)
       }
     })
-  }
+  })
 }
