@@ -27,6 +27,7 @@
     "@types/uuid": "^8.3.4",
     "aws-cdk-lib": "2.34.0",
     "aws-sdk": "^2.1184.0",
+    "aws-xray-sdk": "^3.3.6",
     "constructs": "^10.0.0",
     "http-status-codes": "^2.2.0",
     "source-map-support": "^0.5.21",
