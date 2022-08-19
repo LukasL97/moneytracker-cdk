@@ -7,6 +7,7 @@ import * as path from 'path'
 import {ApiKeySourceType, LambdaIntegration, RestApi} from 'aws-cdk-lib/aws-apigateway'
 import {AttributeType, BillingMode, Table} from 'aws-cdk-lib/aws-dynamodb'
 import {PolicyStatement} from 'aws-cdk-lib/aws-iam'
+import {BackupPlan, BackupResource} from 'aws-cdk-lib/aws-backup'
 
 export class MoneytrackerCdkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -22,12 +23,29 @@ export class MoneytrackerCdkStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY
     })
 
+    const recordsTableUserIndexName = 'records-store-user-index'
+    recordsTable.addGlobalSecondaryIndex({
+      indexName: recordsTableUserIndexName,
+      partitionKey: {
+        name: 'user',
+        type: AttributeType.STRING
+      }
+    })
+
+    const recordsTableBackup = BackupPlan.daily35DayRetention(this, 'records-backup-plan')
+    recordsTableBackup.addSelection('records-backup-selection', {
+      resources: [
+        BackupResource.fromDynamoDbTable(recordsTable)
+      ]
+    })
+
     const recordLambdaProps = {
       memorySize: 128,
       timeout: Duration.seconds(5),
       runtime: lambda.Runtime.NODEJS_16_X,
       environment: {
-        DYNAMODB_TABLE: recordsTable.tableName
+        DYNAMODB_TABLE: recordsTable.tableName,
+        DYNAMODB_INDEX_USER: recordsTableUserIndexName
       },
       tracing: Tracing.ACTIVE
     }
@@ -78,7 +96,7 @@ export class MoneytrackerCdkStack extends Stack {
     const recordsResource = api.root.addResource('records', {
       defaultMethodOptions: {
         apiKeyRequired: true
-      },
+      }
     })
     const recordsResourceId = recordsResource.addResource('{id}')
     recordsResource.addMethod('GET', new LambdaIntegration(getRecords))

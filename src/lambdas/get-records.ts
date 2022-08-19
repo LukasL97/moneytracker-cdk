@@ -13,6 +13,7 @@ export async function getRecords(event: APIGatewayProxyEventV2): Promise<APIGate
     }
     return db.scan({
       TableName: process.env.DYNAMODB_TABLE!!,
+      IndexName: process.env.DYNAMODB_INDEX_USER!!,
       FilterExpression: '#user = :user',
       ExpressionAttributeNames: { '#user': 'user' },
       ExpressionAttributeValues: { ':user': user }
