@@ -40,5 +40,26 @@ describe('get-records', () => {
 
     expect(result.body).toEqual('Did not find any records for user user')
     expect(result.statusCode).toEqual(404)
+
+    expect(db.scan).toHaveBeenCalledWith({
+      TableName: 'test-table',
+      IndexName: 'test-index-user',
+      FilterExpression: '#user = :user',
+      ExpressionAttributeNames: { '#user': 'user' },
+      ExpressionAttributeValues: { ':user': 'user' }
+    })
+  })
+
+  it('should return 400 when user is missing in request url', async () => {
+    const eventWithoutUser = {
+      ...getRecordsEvent,
+      rawQueryString: '',
+      queryStringParameters: {}
+    }
+
+    const result = await getRecords(eventWithoutUser) as APIGatewayProxyStructuredResultV2
+
+    expect(result.body).toEqual('user is missing')
+    expect(result.statusCode).toEqual(400)
   })
 })
