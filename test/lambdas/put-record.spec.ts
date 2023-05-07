@@ -15,7 +15,7 @@ describe('put-record', () => {
 
     const result = await putRecord(putRecordEvent) as APIGatewayProxyStructuredResultV2
 
-    expect(result.body).toBeTruthy()
+    expect(result.body).toEqual('33ebe2e4-b29e-4326-9b77-f4acf16249c2')
     expect(result.statusCode).toEqual(200)
 
     expect(db.put).toHaveBeenCalledWith({
