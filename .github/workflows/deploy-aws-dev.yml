@@ -21,6 +21,7 @@ jobs:
       with:
         role-to-assume: arn:aws:iam::938347404652:role/moneytracker-cdk-cloudformation
         aws-region: eu-central-1
+    - run: npm install -g esbuild
     - name: cdk diff
       uses: youyo/aws-cdk-github-actions@v2
       with:
