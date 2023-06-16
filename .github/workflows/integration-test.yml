@@ -14,28 +14,38 @@ jobs:
       matrix:
         node-version: [ 18.7.0 ]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+        # These permissions are needed to interact with GitHub's OIDC Token endpoint.
     permissions:
       id-token: write
       contents: read
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - name: Configure AWS credentials from dev account
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: arn:aws:iam::938347404652:role/moneytracker-cdk-cloudformation
-        aws-region: eu-central-1
-    - name: Install CDK
-      run: npm install -g aws-cdk
-    - name: Synthesize CloudFormation stack
-      run: cdk synth
-    - name: Deploy to AWS dev
-      run: cdk deploy --require-approval never
-
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build --if-present
+      - name: Configure AWS credentials from dev account
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::938347404652:role/moneytracker-cdk-cloudformation
+          aws-region: eu-central-1
+      - name: Install CDK
+        run: npm install -g aws-cdk
+      - name: Synthesize CloudFormation stack
+        run: cdk synth
+      - name: Deploy to AWS dev
+        run: cdk deploy --require-approval never
+  test:
+    name: Integration tests against dev
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run test script
+        env:
+          DEV_API_ENDPOINT: ${{ secrets.DEV_API_ENDPOINT }}
+          DEV_API_KEY: ${{ secrets.DEV_API_KEY }}
+        run: python integration-test/test.py
