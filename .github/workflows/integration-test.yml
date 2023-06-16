@@ -27,7 +27,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build --if-present
-      - name: Configure AWS credentials from dev account
+      - name: Assume role to set up cloudformation stack on AWS dev account
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::938347404652:role/moneytracker-cdk-cloudformation
@@ -44,6 +44,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Assume role to access resources on AWS dev account
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::938347404652:role/moneytracker-cdk-integration-test
+          aws-region: eu-central-1
+      - name: Setup python environment
+        run: pip install boto3
       - name: Run test script
         env:
           DEV_API_ENDPOINT: ${{ secrets.DEV_API_ENDPOINT }}

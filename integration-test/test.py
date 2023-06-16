@@ -1,9 +1,20 @@
 import requests
 import unittest
 import os
+import boto3
 
 api_endpoint = os.getenv('DEV_API_ENDPOINT')
 api_key = os.getenv('DEV_API_KEY')
+
+db_table_name = 'records'
+
+db_client = boto3.client('dynamodb')
+
+
+def clear_db():
+    result = db_client.scan(TableName=db_table_name)
+    print(result['Items'])
+    # TODO: clear db
 
 
 def put_record(record):
@@ -21,6 +32,8 @@ def delete_record(id):
 class ApiTest(unittest.TestCase):
 
     def test_put_get_delete_record(self):
+        clear_db()
+
         record = {
             'title': 'record',
             'date': '2022-08-16T07:17:49+02:00[Europe/Berlin]',
