@@ -23,5 +23,9 @@ jobs:
         aws-region: eu-central-1
     - name: Install CDK
       run: npm install -g aws-cdk
+    - name: Synthesize CloudFormation stack
+      run: cdk synth
+    - name: Bootstrap CDK environment
+      run: cdk bootstrap
     - name: Deploy to AWS dev
       run: cdk deploy
