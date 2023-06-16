@@ -40,8 +40,6 @@ export class MoneytrackerCdkStack extends Stack {
     })
 
     const recordLambdaProps = {
-      projectRoot: '.',
-      depsLockFilePath: 'package-lock.json',
       memorySize: 128,
       timeout: Duration.seconds(5),
       runtime: lambda.Runtime.NODEJS_16_X,
